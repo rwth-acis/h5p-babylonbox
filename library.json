@@ -1,0 +1,20 @@
+{
+  "title": "BabylonBox",
+  "description": "Embed babylon.js",
+  "majorVersion": 1,
+  "minorVersion": 0,
+  "patchVersion": 0,
+  "runnable": 1,
+  "author": "Johannes Ballmann",
+  "license": "MIT",
+  "machineName": "H5P.BabylonBox",
+  "coreApi": {
+    "majorVersion": 1,
+    "minorVersion": 0
+  },
+  "preloadedJs": [
+    {
+      "path": "dist/main.js"
+    }
+  ]
+}
