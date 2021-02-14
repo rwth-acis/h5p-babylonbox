@@ -3,27 +3,27 @@ import Markers from './markers.js';
 
 H5P.BabylonBox = (function ($) {
 
-  function BabylonBox(parameters, id) {
+  function BabylonBox(options, id) {
     this.id = id;
 
-    this.init = ($canvas) => {
-      this.$canvas = $canvas;
-      this.engine = new BABYLON.Engine(this.$canvas, true);
-      this.createScene();
+    this.attach = ($container) => {
+      this.canvas = $('<canvas class="renderCanvas" />').appendTo($container)[0];
+      this.engine = new BABYLON.Engine(this.canvas, true);
+      createScene();
       // this.initModelRotation();
       this.markers = new Markers(this);
       this.engine.runRenderLoop(() => {
         this.scene.render();
       });
-      $(window).on('resize', () => {
+      H5P.$window.on('resize', () => {
         this.engine.resize();
       });
     }
 
-    this.createScene = () => {
+    const createScene = () => {
       this.scene = new BABYLON.Scene(this.engine);
       // create cube
-      this.model = BABYLON.MeshBuilder.CreateBox('box', {});
+      this.model = BABYLON.MeshBuilder.CreateBox('model', {});
       // create camera
       this.camera = new BABYLON.ArcRotateCamera(
         'camera',
@@ -32,7 +32,7 @@ H5P.BabylonBox = (function ($) {
         10,
         new BABYLON.Vector3(0, 0, 0)
       );
-      this.camera.attachControl(this.$canvas, true);
+      this.camera.attachControl(this.canvas, true);
       // create light
       const light = new BABYLON.HemisphericLight(
         'light',
@@ -59,6 +59,7 @@ H5P.BabylonBox = (function ($) {
     }
 
   }
+
   return BabylonBox;
 
 })(H5P.jQuery);
