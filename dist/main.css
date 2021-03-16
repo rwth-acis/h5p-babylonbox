@@ -1,0 +1,9 @@
+body.in-vr-mode {
+  position: fixed !important;
+}
+
+body.in-vr-mode .renderCanvas {
+  width: 100vw !important;
+  height: 100vh !important;
+}
+

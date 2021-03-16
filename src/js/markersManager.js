@@ -7,6 +7,10 @@ const MarkersManager = (function () {
   let markerAnimations;
   let markerMaterials;
 
+  /**
+   * Constructor function
+   * @param {BabylonBox} babylonBox - BabylonBox instance
+   */
   function MarkersManager(babylonBox) {
     this._babylonBox = babylonBox;
 
@@ -17,6 +21,10 @@ const MarkersManager = (function () {
     this._initAnimations();
   }
 
+  /**
+   * Creates programmatically all marker materials (for active and inactive)
+   * @private
+   */
   MarkersManager.prototype._initMaterials = function () {
     markerMaterials = {
       inactive: {
@@ -36,6 +44,10 @@ const MarkersManager = (function () {
     markerMaterials.inactive.material.alpha = markerMaterials.inactive.opacity;
   }
 
+  /**
+   * Creates programmatically all marker animations (scale, fade)
+   * @private
+   */
   MarkersManager.prototype._initAnimations = function () {
     markerAnimations = {
       scale: {
@@ -75,6 +87,10 @@ const MarkersManager = (function () {
     markerAnimationGroup = new BABYLON.AnimationGroup("animation_group_for_markers", this._babylonBox.scene);
   }
 
+  /**
+   * Creates marker and add it to markers list
+   * @param {Object} options - Config object for marker
+   */
   MarkersManager.prototype.addMarker = function (options) {
     const marker = new Marker(options);
     marker.arrayPosition = this.markers.length;
@@ -83,17 +99,30 @@ const MarkersManager = (function () {
     return marker;
   }
 
+  /**
+   * Removes marker
+   * @param {Marker} marker - Marker to remove
+   */
   MarkersManager.prototype.removeMarker = function (marker) {
     this.markers.splice(marker.arrayPosition, 1);
     marker.remove();
   }
 
+  /**
+   * Draws marker
+   * @private
+   * @param {Marker} marker - Marker to draw
+   */
   MarkersManager.prototype._drawMarker = function (marker) {
     marker.draw(this._babylonBox.model, this._babylonBox.scene);
     marker.colorize(markerMaterials.inactive.material);
     this._animateMarker(marker);
   }
 
+  /**
+   * Animates marker with scale and fade
+   * @param {Marker} marker - Marker to animate (must be drawed before)
+   */
   MarkersManager.prototype._animateMarker = function (marker) {
     markerAnimationGroup.addTargetedAnimation(markerAnimations.scale.obj, marker.pulse);
     markerAnimationGroup.addTargetedAnimation(markerAnimations.fade.obj, marker.pulse);
@@ -101,15 +130,24 @@ const MarkersManager = (function () {
     markerAnimationGroup.play(true);
   }
 
+  /**
+   * Sets marker active
+   * @param {Marker} marker - Marker that should be active
+   */
   MarkersManager.prototype.setMarkerActive = function (marker) {
     if (this.activeMarker) {
-      this._changeOpticalState(false, this.activeMarker.drawing, this.activeMarker.pulse);
+      this._changeOpticalState(false, this.activeMarker);
     }
     this.activeMarker = marker;
-    this._changeOpticalState(true, his.activeMarker.drawing, his.activeMarker.pulse);
+    this._changeOpticalState(true, this.activeMarker);
   }
 
-  MarkersManager.prototype._changeOpticalState = function (isNewStateActive, drawing, pulse) {
+  /**
+   * Changes the optical appearance
+   * @param {boolean} isNewStateActive - Indicates whether the marker should have an active look
+   * @param {Marker} marker - Marker that should change look
+   */
+  MarkersManager.prototype._changeOpticalState = function (isNewStateActive, marker) {
       pulse.isVisible = !isNewStateActive ? 1 : 0;
       const state = !isNewStateActive ? 'inactive' : 'active';
       marker.colorize(markerMaterials[state].material);
