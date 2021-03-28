@@ -1,5 +1,10 @@
 import * as BABYLON from 'babylonjs';
-import MarkersManager from './markersManager.js';
+import WebXRPolyfill from 'webxr-polyfill';
+import WebVRPolyfill from 'webvr-polyfill';
+import AnnotationsManager from './annotationsManager.js';
+
+const xrPolyfill = new WebXRPolyfill();
+const vrPolyfill = new WebVRPolyfill();
 
 H5P.BabylonBox = (function ($) {
 
@@ -14,7 +19,7 @@ H5P.BabylonBox = (function ($) {
     this.id = id;
     this.options = $.extend({
       modelUrl: null,
-      markers: []
+      annotations: []
     }, options);
     this.webXRSupported = false;
     this.inWebXRExperience = false;
@@ -41,9 +46,9 @@ H5P.BabylonBox = (function ($) {
       this.trigger('webXRSupported');
     }
 
-    this._markersManager = new MarkersManager(this);
-    for (const markerOptions of this.options.markers) {
-      this._markersManager.addMarker(markerOptions);
+    this._annotationsManager = new AnnotationsManager(this);
+    for (const annotationOptions of this.options.annotations) {
+      this._annotationsManager.addAnnotation(annotationOptions);
     }
 
     this.engine.runRenderLoop(() => {
@@ -119,33 +124,33 @@ H5P.BabylonBox = (function ($) {
   }
 
   /**
-   * Adds new marker to model
-   * @param {Object} - Config object for marker
-   * @return {Marker} - New created marker
+   * Adds new annotation to model
+   * @param {Object} - Config object for annotation
+   * @return {Annotation} - New created annotation
    */
-  BabylonBox.prototype.addMarker = function (options) {
-    if (this._markersManager) {
-      return this._markersManager.addMarker(options);
+  BabylonBox.prototype.addAnnotation = function (options) {
+    if (this._annotationsManager) {
+      return this._annotationsManager.addAnnotation(options);
     }
   }
 
   /**
-   * Removes marker from model
-   * @param {Marker} - Marker to remove
+   * Removes annotation from model
+   * @param {Annotation} - Annotation to remove
    */
-  BabylonBox.prototype.removeMarker = function (marker) {
-    this._markersManager.removeMarker(marker);
+  BabylonBox.prototype.removeAnnotation = function (annotation) {
+    this._annotationsManager.removeAnnotation(annotation);
   }
 
   /**
-   * Gets all created markers
-   * @return {Marker[]} - Array of all markers
+   * Gets all created annotations
+   * @return {Annotation[]} - Array of all annotations
    */
-  BabylonBox.prototype.getMarkers = function () {
-    if (this._markersManager) {
-      return this._markersManager.markers;
+  BabylonBox.prototype.getAnnotations = function () {
+    if (this._annotationsManager) {
+      return this._annotationsManager.annotations;
     }
-    return this.options.markers;
+    return this.options.annotations;
   }
 
   /**
@@ -153,16 +158,16 @@ H5P.BabylonBox = (function ($) {
    */
   BabylonBox.prototype.startWebXRExperience = async function () {
     if (!this.webXRSupported) {
-      alert('action failed: no webxr support');
+      alert('WebXR is not supported');
       return;
     }
     const canvas = this.$canvas[0];
     if (!this._xrHelper) {
       this._xrHelper = await BABYLON.WebXRExperienceHelper.CreateAsync(this.scene);
-      canvas.onfullscreenchange = async (event) => {
+      canvas.onfullscreenchange = async () => {
         if (document.fullscreenElement === canvas) {
           // enter fullscreen
-          this.engine.setSize(screen.width, screen.height);
+          this.engine.resize();
         }
         else {
           // leave fullscreen
@@ -176,7 +181,7 @@ H5P.BabylonBox = (function ($) {
               break;
             case BABYLON.WebXRState.ENTERING_XR:
               // xr is being initialized, enter XR request was made
-              $('body').addClass('in-vr-mode');
+              // $('body').addClass('in-vr-mode');
               break;
             case BABYLON.WebXRState.EXITING_XR:
               // xr exit request was made. not yet done.
@@ -186,14 +191,20 @@ H5P.BabylonBox = (function ($) {
               if (document.fullscreenElement === canvas) {
                 document.exitFullscreen();
               }
-              $('body').removeClass('in-vr-mode');
+              // $('body').removeClass('in-vr-mode');
               console.log('not in xr mode');
               break;
           }
       });
     }
 
-    this._xrHelper.enterXRAsync('immersive-vr', 'local-floor');
+    $('body').keydown((event) => {
+      if (event.key === 'Escape') {
+        this.exitWebXRExperience();
+      }
+    });
+
+    await this._xrHelper.enterXRAsync('immersive-vr', 'local-floor');
     // canvas.requestFullscreen();
   }
 

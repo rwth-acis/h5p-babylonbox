@@ -1,15 +1,15 @@
 import * as BABYLON from 'babylonjs';
 
-const Marker = (function () {
+const Annotation = (function () {
 
   const diameter = 0.05;
 
   /**
    * Constructor function
    * @extends H5P.EventDispatcher
-   * @param {Object} - Config object for marker
+   * @param {Object} - Config object for annotation
    */
-  function Marker(options) {
+  function Annotation(options) {
     H5P.EventDispatcher.call(this);
 
     this.id = options.id;
@@ -17,22 +17,22 @@ const Marker = (function () {
     this.content = options.content;
   }
 
-  Marker.prototype = Object.create(H5P.EventDispatcher.prototype);
-  Marker.prototype.constructor = Marker;
+  Annotation.prototype = Object.create(H5P.EventDispatcher.prototype);
+  Annotation.prototype.constructor = Annotation;
 
   /**
-   * Draws marker on canvas
-   * @param {BabylonBox.model} model - model where marker should attach to
-   * @param {BabylonBox.scene} scene - Scene of the model
+   * Draws annotation on canvas
+   * @param {BABYLON.Mesh} model - model where annotation should attach to
+   * @param {BABYLON.Scene} scene - Scene of the model
    */
-  Marker.prototype.draw = function (model, scene) {
+  Annotation.prototype.draw = function (model, scene) {
     const drawing = BABYLON.MeshBuilder.CreateSphere(
-      'marker_' + this.id,
+      'annotation_' + this.id,
       { diameter },
       scene
     );
     const pulse = BABYLON.MeshBuilder.CreateSphere(
-      'pulse_of_marker_' + this.id,
+      'pulse_of_annotation_' + this.id,
       { diameter },
       scene
     );
@@ -56,7 +56,7 @@ const Marker = (function () {
     pulse.actionManager.registerAction(
       new BABYLON.ExecuteCodeAction(
         BABYLON.ActionManager.OnPickTrigger, () => {
-          this.trigger('markerClicked', this);
+          this.trigger('annotationClicked', this);
         }
       )
     );
@@ -65,25 +65,25 @@ const Marker = (function () {
   }
 
   /**
-   * Colorize marker
-   * @param {BABYLON.StandardMaterial} - Material for marker
+   * Colorize annotation
+   * @param {BABYLON.StandardMaterial} - Material for annotation
    */
-  Marker.prototype.colorize = function (material) {
+  Annotation.prototype.colorize = function (material) {
     this.drawing.material = material.clone();
     this.pulse.material = material.clone();
   }
 
   /**
-   * Remove marker
+   * Remove annotation
    */
-  Marker.prototype.remove = function () {
+  Annotation.prototype.remove = function () {
     this.drawing.dispose();
     this.pulse.dispose();
     delete this;
   }
 
-  return Marker;
+  return Annotation;
 
 })();
 
-export default Marker;
+export default Annotation;
