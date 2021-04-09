@@ -25,7 +25,7 @@ const Annotation = (function () {
    * @param {BABYLON.Mesh} model - model where annotation should attach to
    * @param {BABYLON.Scene} scene - Scene of the model
    */
-  Annotation.prototype.draw = function (model, scene) {
+  Annotation.prototype.draw = function (scene) {
     const drawing = BABYLON.MeshBuilder.CreateSphere(
       'annotation_' + this.id,
       { diameter },
@@ -37,7 +37,6 @@ const Annotation = (function () {
       scene
     );
     pulse.parent = drawing;
-    drawing.parent = model;
     drawing.position = new BABYLON.Vector3(
       this._options.position.x,
       this._options.position.y,
@@ -53,10 +52,27 @@ const Annotation = (function () {
       BABYLON.Space.WORLD
     );
     pulse.actionManager = new BABYLON.ActionManager(scene);
+    // register click trigger
     pulse.actionManager.registerAction(
       new BABYLON.ExecuteCodeAction(
         BABYLON.ActionManager.OnPickTrigger, () => {
-          this.trigger('annotationClicked', this);
+          this.trigger('picked', this);
+        }
+      )
+    );
+    // register pointer over trigger
+    pulse.actionManager.registerAction(
+      new BABYLON.ExecuteCodeAction(
+        BABYLON.ActionManager.OnPointerOverTrigger, () => {
+          this.trigger('pointerover', this);
+        }
+      )
+    );
+    // register pointer out trigger
+    pulse.actionManager.registerAction(
+      new BABYLON.ExecuteCodeAction(
+        BABYLON.ActionManager.OnPointerOutTrigger, () => {
+          this.trigger('pointerout', this);
         }
       )
     );

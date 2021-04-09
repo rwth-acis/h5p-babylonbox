@@ -1,3 +1,4 @@
+import './css/babylonbox.css';
 import BabylonBox from './js/babylonbox';
 
 // Load library

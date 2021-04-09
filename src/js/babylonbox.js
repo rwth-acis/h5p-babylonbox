@@ -1,10 +1,10 @@
 import * as BABYLON from 'babylonjs';
-import WebXRPolyfill from 'webxr-polyfill';
-import WebVRPolyfill from 'webvr-polyfill';
 import AnnotationsManager from './annotationsManager.js';
-
-const xrPolyfill = new WebXRPolyfill();
-const vrPolyfill = new WebVRPolyfill();
+import Camera from './camera.js';
+import Light from './light.js';
+import Model from './model.js';
+import LoadingScreen from './loadingScreen.js';
+import WebXRExperience from './webXRExperience.js';
 
 H5P.BabylonBox = (function ($) {
 
@@ -18,11 +18,11 @@ H5P.BabylonBox = (function ($) {
     H5P.EventDispatcher.call(this);
     this.id = id;
     this.options = $.extend({
-      modelUrl: null,
+      modelUrl: 'http://models.babylonjs.com/CornellBox/cornellBox.glb',
       annotations: []
     }, options);
+    this.options.modelUrl = 'http://models.babylonjs.com/CornellBox/cornellBox.glb';
     this.webXRSupported = false;
-    this.inWebXRExperience = false;
   }
 
   // extends H5P.EventDispatcher
@@ -33,22 +33,25 @@ H5P.BabylonBox = (function ($) {
    * Creates canvas and append it to container
    * @param {jQuery} $container - Canvas container
    */
-  BabylonBox.prototype.attach = async function ($container) {
-    this.$canvas = $('<canvas class="renderCanvas" />');
-    this.$canvas.appendTo($container);
-    this.engine = new BABYLON.Engine(this.$canvas[0], true);
-    this._createScene();
-    // this._initModelRotation();
+  BabylonBox.prototype.attach = async function ($wrapper) {
+    this._$container = $(`<div class="h5p-babylonbox"></div>`).appendTo($wrapper);
 
-    this.webXRSupported = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-vr');
-    if (this.webXRSupported) {
-      console.log('check - WebXR supported');
-      this.trigger('webXRSupported');
+    this.$canvas = $('<canvas class="h5p-babylonbox--canvas" />');
+    this.$canvas.appendTo(this._$container);
+
+    await this._createBabylonScene();
+
+    // Check WebXR support
+    this._webXR = new WebXRExperience(this.$canvas[0], this.scene);
+    const webXRSupported = await this._webXR.isSupported();
+    if (webXRSupported) {
+      console.log('h5p-babylonbox --- WebXR supported');
+      this.trigger('WebXR supported');
     }
 
     this._annotationsManager = new AnnotationsManager(this);
     for (const annotationOptions of this.options.annotations) {
-      this._annotationsManager.addAnnotation(annotationOptions);
+      this.addAnnotation(annotationOptions);
     }
 
     this.engine.runRenderLoop(() => {
@@ -61,13 +64,22 @@ H5P.BabylonBox = (function ($) {
 
     this.$canvas.dblclick(() => {
       const picked = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
-      if (picked && picked.pickedMesh && picked.pickedMesh.isPickable && picked.pickedMesh.id === 'model') {
+      if (
+        picked &&
+        picked.pickedMesh &&
+        picked.pickedMesh.isPickable &&
+        this.model.meshesIds.includes(picked.pickedMesh.id)
+      ) {
         this.trigger('dblClick', {
           position: picked.pickedPoint,
           normalRef: picked.getNormal(true, true)
         });
       }
     });
+
+    setTimeout(() => {
+      this.trigger('ready');
+    }, 500);
   }
 
   /**
@@ -78,49 +90,31 @@ H5P.BabylonBox = (function ($) {
   }
 
   /**
-   * Creates Babylon.js scene with model, camera and light
+   * Creates Babylon.js scene with loading screen, model, camera and light
    * @private
    */
-  BabylonBox.prototype._createScene = function () {
+  BabylonBox.prototype._createBabylonScene = async function () {
+    this.engine = new BABYLON.Engine(this.$canvas[0], true);
     this.scene = new BABYLON.Scene(this.engine);
-    // create cube
-    this.model = BABYLON.MeshBuilder.CreateBox('model', {});
-    // create camera
-    this.camera = new BABYLON.ArcRotateCamera(
-      'camera',
-      -Math.PI / 2,
-      Math.PI / 2.5,
-      10,
-      new BABYLON.Vector3(0, 0, 0)
-    );
-    this.camera.attachControl(this.canvas, true);
-    // create light
-    const light = new BABYLON.HemisphericLight(
-      'light',
-      new BABYLON.Vector3(1, 1, 0)
-    );
-  }
 
-  /**
-   * Initiates rotation of model
-   * @private
-   */
-  BabylonBox._initModelRotation = function () {
-    const frameRate = 15;
-    const rotation = new BABYLON.Animation(
-      'modelRotation',
-      'rotation.y',
-      1, // 1 frame per second
-      BABYLON.Animation.ANIMATIONTYPE_FLOAT,
-      BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE // looped animation
-    )
-    rotation.setKeys([
-      {frame: 0, value: 0},
-      {frame: frameRate, value: 2 * Math.PI}
-    ]);
-    this.model.animations.push(rotation);
-    // begin model rotation
-    this.scene.beginAnimation(this.model, 0, frameRate, true);
+    // Create and show loading screen
+    this.engine.loadingScreen = new LoadingScreen(this._$container);
+    this.engine.displayLoadingUI();
+
+    // Import model from url
+    this.model = new Model(this.scene);
+    await this.model.importAsync(
+      this.options.modelUrl,
+      this.engine.loadingScreen.getProgressHandlerFunction()
+    );
+
+    this.engine.hideLoadingUI();
+
+    // Create camera
+    this.camera = new Camera('camera', this.$canvas[0], this.scene);
+
+    // Create light
+    this.light = new Light(this.scene);
   }
 
   /**
@@ -130,7 +124,17 @@ H5P.BabylonBox = (function ($) {
    */
   BabylonBox.prototype.addAnnotation = function (options) {
     if (this._annotationsManager) {
-      return this._annotationsManager.addAnnotation(options);
+      const annotation = this._annotationsManager.addAnnotation(options);
+      annotation.on('picked', ({ data }) => {
+        this.trigger('annotation picked', data);
+      });
+      annotation.on('pointerover', ({ data }) => {
+        this.trigger('annotation pointerover', data);
+      });
+      annotation.on('pointerout', ({ data }) => {
+        this.trigger('annotation pointerout', data);
+      });
+      return annotation;
     }
   }
 
@@ -154,67 +158,31 @@ H5P.BabylonBox = (function ($) {
   }
 
   /**
+   * Gets the index of the annotation
+   * @param {Annotation} annotation - Annotation for which the index is to be determined
+   * @return {number} - Index of annotation, returns -1 if annotation not exists
+   */
+  BabylonBox.prototype.getIndexOfAnnotation = function (annotation) {
+    return this.getAnnotations().indexOf(annotation);
+  }
+
+  /**
    * Starts the WebXR Experience if WebXR is supported
    */
   BabylonBox.prototype.startWebXRExperience = async function () {
-    if (!this.webXRSupported) {
+    const webXRSupported = await this._webXR.isSupported();
+    if (!webXRSupported) {
       alert('WebXR is not supported');
       return;
     }
-    const canvas = this.$canvas[0];
-    if (!this._xrHelper) {
-      this._xrHelper = await BABYLON.WebXRExperienceHelper.CreateAsync(this.scene);
-      canvas.onfullscreenchange = async () => {
-        if (document.fullscreenElement === canvas) {
-          // enter fullscreen
-          this.engine.resize();
-        }
-        else {
-          // leave fullscreen
-          this.exitWebXRExperience();
-        }
-      }
-      this._xrHelper.onStateChangedObservable.add(async (state) => {
-          switch (state) {
-            case BABYLON.WebXRState.IN_XR:
-              // XR is initialized and already submitted one frame
-              break;
-            case BABYLON.WebXRState.ENTERING_XR:
-              // xr is being initialized, enter XR request was made
-              // $('body').addClass('in-vr-mode');
-              break;
-            case BABYLON.WebXRState.EXITING_XR:
-              // xr exit request was made. not yet done.
-              break;
-            case BABYLON.WebXRState.NOT_IN_XR:
-              // either our or not yet in XR
-              if (document.fullscreenElement === canvas) {
-                document.exitFullscreen();
-              }
-              // $('body').removeClass('in-vr-mode');
-              console.log('not in xr mode');
-              break;
-          }
-      });
-    }
-
-    $('body').keydown((event) => {
-      if (event.key === 'Escape') {
-        this.exitWebXRExperience();
-      }
-    });
-
-    await this._xrHelper.enterXRAsync('immersive-vr', 'local-floor');
-    // canvas.requestFullscreen();
+    this._webXR.start();
   }
 
   /**
    * Exits WebXR Experience
    */
   BabylonBox.prototype.exitWebXRExperience = async function () {
-    if (this._xrHelper) {
-      await this._xrHelper.exitXRAsync();
-    }
+    this._webXR.exit();
   }
 
   return BabylonBox;

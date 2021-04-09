@@ -31,17 +31,31 @@ const AnnotationsManager = (function () {
         opacity: 0.8,
         color: new BABYLON.Color3(1, 0, 0)
       },
+      hover: {
+        opacity: 1,
+        color: new BABYLON.Color3(1, 0, 0)
+      },
       active: {
         color: new BABYLON.Color3(0, 0, 1)
       }
     }
     for (const state in annotationMaterials) {
-      const material = new BABYLON.StandardMaterial('material_for_' + state + '_annotations', this._babylonBox.scene);
+      const configObj = annotationMaterials[state];
+      const material = new BABYLON.StandardMaterial(
+        'material for ' + state + ' annotations',
+        this._babylonBox.scene
+      );
       material.disableLighting = true;
-      material.emissiveColor = annotationMaterials[state].color;
-      annotationMaterials[state].material = material;
+
+      if (configObj.color) {
+        material.emissiveColor = configObj.color;
+      }
+      if (configObj.opacity) {
+        material.alpha = configObj.opacity;
+      }
+
+      configObj.material = material;
     }
-    annotationMaterials.inactive.material.alpha = annotationMaterials.inactive.opacity;
   }
 
   /**
@@ -80,11 +94,20 @@ const AnnotationsManager = (function () {
       }
     }
     for (const state in annotationAnimations) {
-      const animation = annotationAnimations[state];
-      animation.obj = new BABYLON.Animation(animation.transform + ' annotation', animation.transform, 10, BABYLON.Animation['ANIMATIONTYPE_' + animation.valueType], BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-      animation.obj.setKeys(animation.keys);
+      const configObj = annotationAnimations[state];
+      configObj.obj = new BABYLON.Animation(
+        state + ' annotation',
+        configObj.transform,
+        10,
+        BABYLON.Animation['ANIMATIONTYPE_' + configObj.valueType],
+        BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+      );
+      configObj.obj.setKeys(configObj.keys);
     }
-    annotationAnimationGroup = new BABYLON.AnimationGroup("animation_group_for_annotations", this._babylonBox.scene);
+    annotationAnimationGroup = new BABYLON.AnimationGroup(
+      "animation group for annotations",
+      this._babylonBox.scene
+    );
   }
 
   /**
@@ -93,7 +116,6 @@ const AnnotationsManager = (function () {
    */
   AnnotationsManager.prototype.addAnnotation = function (options) {
     const annotation = new Annotation(options);
-    annotation.arrayPosition = this.annotations.length;
     this.annotations.push(annotation);
     this._drawAnnotation(annotation);
     return annotation;
@@ -104,8 +126,11 @@ const AnnotationsManager = (function () {
    * @param {Annotation} annotation - Annotation to remove
    */
   AnnotationsManager.prototype.removeAnnotation = function (annotation) {
-    this.annotations.splice(annotation.arrayPosition, 1);
-    annotation.remove();
+    const arrayPosition = this.annotations.indexOf(annotation);
+    if (arrayPosition >= 0) {
+      this.annotations.splice(arrayPosition, 1);
+      annotation.remove();
+    }
   }
 
   /**
@@ -114,7 +139,7 @@ const AnnotationsManager = (function () {
    * @param {Annotation} annotation - Annotation to draw
    */
   AnnotationsManager.prototype._drawAnnotation = function (annotation) {
-    annotation.draw(this._babylonBox.model, this._babylonBox.scene);
+    annotation.draw(this._babylonBox.scene);
     annotation.colorize(annotationMaterials.inactive.material);
     this._animateAnnotation(annotation);
   }
@@ -124,32 +149,53 @@ const AnnotationsManager = (function () {
    * @param {Annotation} annotation - Annotation to animate (must be drawed before)
    */
   AnnotationsManager.prototype._animateAnnotation = function (annotation) {
-    annotationAnimationGroup.addTargetedAnimation(annotationAnimations.scale.obj, annotation.pulse);
-    annotationAnimationGroup.addTargetedAnimation(annotationAnimations.fade.obj, annotation.pulse);
+    annotationAnimationGroup.addTargetedAnimation(
+      annotationAnimations.scale.obj,
+      annotation.pulse
+    );
+    annotationAnimationGroup.addTargetedAnimation(
+      annotationAnimations.fade.obj,
+      annotation.pulse
+    );
     annotationAnimationGroup.normalize(0, 12);
     annotationAnimationGroup.play(true);
   }
 
   /**
+   * Sets optical state of annotation
+   * @param {string} state - State of the annotation (inactive, active, hover)
+   * @param {Annotation} annotation - Annotation that should have the state
+   */
+   AnnotationsManager.prototype.setAnnotationState = function (state, annotation) {
+     switch (state) {
+       case 'active': this._setAnnotationActive(annotation); break;
+       case 'hover': this._changeOpticalState('hover', true, annotation); break;
+       default: this._changeOpticalState('inactive', true, annotation);
+     }
+   }
+
+  /**
    * Sets annotation active
+   * @private
    * @param {Annotation} annotation - Annotation that should be active
    */
-  AnnotationsManager.prototype.setAnnotationActive = function (annotation) {
+  AnnotationsManager.prototype._setAnnotationActive = function (annotation) {
     if (this.activeAnnotation) {
-      this._changeOpticalState(false, this.activeAnnotation);
+      this._changeOpticalState('inactive', true, this.activeAnnotation);
     }
     this.activeAnnotation = annotation;
-    this._changeOpticalState(true, this.activeAnnotation);
+    this._changeOpticalState('active', false, this.activeAnnotation);
   }
 
   /**
    * Changes the optical appearance
-   * @param {boolean} isNewStateActive - Indicates whether the annotation should have an active look
+   * @private
+   * @param {string} state - State of the annotation
+   * @param {boolean} hasPulse - Indicates whether the pulse should be shown
    * @param {Annotation} annotation - Annotation that should change look
    */
-  AnnotationsManager.prototype._changeOpticalState = function (isNewStateActive, annotation) {
-      pulse.isVisible = !isNewStateActive ? 1 : 0;
-      const state = !isNewStateActive ? 'inactive' : 'active';
+  AnnotationsManager.prototype._changeOpticalState = function (state, hasPulse, annotation) {
+      annotation.pulse.isVisible = hasPulse;
       annotation.colorize(annotationMaterials[state].material);
   }
 
