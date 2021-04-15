@@ -3,9 +3,16 @@ import Annotation from './annotation.js';
 
 const AnnotationsManager = (function () {
 
+  const MATERIAL_OPACITY = 0.8;
+
+  const COLORS = {
+    inactive: [1, 0, 0],
+    hover: [0, 1, 0],
+    active: [0, 0, 1]
+  };
+
   let annotationAnimationGroup;
   let annotationAnimations;
-  let annotationMaterials;
 
   /**
    * Constructor function
@@ -17,45 +24,17 @@ const AnnotationsManager = (function () {
     this.annotations = [];
     this.activeAnnotation = null;
 
-    this._initMaterials();
+    this._annotationMaterial = new BABYLON.StandardMaterial(
+      'material for markers',
+      this._babylonBox.scene
+    );
+    this._annotationMaterial.disableLighting = true;
+    this._annotationMaterial.emissiveColor = new BABYLON.Color3(
+      ...COLORS.inactive
+    );
+    this._annotationMaterial.alpha = MATERIAL_OPACITY;
+
     this._initAnimations();
-  }
-
-  /**
-   * Creates programmatically all annotation materials (for active and inactive)
-   * @private
-   */
-  AnnotationsManager.prototype._initMaterials = function () {
-    annotationMaterials = {
-      inactive: {
-        opacity: 0.8,
-        color: new BABYLON.Color3(1, 0, 0)
-      },
-      hover: {
-        opacity: 1,
-        color: new BABYLON.Color3(1, 0, 0)
-      },
-      active: {
-        color: new BABYLON.Color3(0, 0, 1)
-      }
-    }
-    for (const state in annotationMaterials) {
-      const configObj = annotationMaterials[state];
-      const material = new BABYLON.StandardMaterial(
-        'material for ' + state + ' annotations',
-        this._babylonBox.scene
-      );
-      material.disableLighting = true;
-
-      if (configObj.color) {
-        material.emissiveColor = configObj.color;
-      }
-      if (configObj.opacity) {
-        material.alpha = configObj.opacity;
-      }
-
-      configObj.material = material;
-    }
   }
 
   /**
@@ -84,7 +63,7 @@ const AnnotationsManager = (function () {
         keys: [
           {
             frame: 0,
-            value: annotationMaterials.inactive.opacity
+            value: MATERIAL_OPACITY
           },
           {
             frame: 10,
@@ -140,7 +119,7 @@ const AnnotationsManager = (function () {
    */
   AnnotationsManager.prototype._drawAnnotation = function (annotation) {
     annotation.draw(this._babylonBox.scene);
-    annotation.colorize(annotationMaterials.inactive.material);
+    annotation.setMaterial(this._annotationMaterial);
     this._animateAnnotation(annotation);
   }
 
@@ -196,7 +175,7 @@ const AnnotationsManager = (function () {
    */
   AnnotationsManager.prototype._changeOpticalState = function (state, hasPulse, annotation) {
       annotation.pulse.isVisible = hasPulse;
-      annotation.colorize(annotationMaterials[state].material);
+      annotation.changeMaterial('emissiveColor', new BABYLON.Color3(...COLORS[state]));
   }
 
   return AnnotationsManager;

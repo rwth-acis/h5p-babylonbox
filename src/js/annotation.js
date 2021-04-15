@@ -2,7 +2,7 @@ import * as BABYLON from 'babylonjs';
 
 const Annotation = (function () {
 
-  const diameter = 0.05;
+  const DIAMETER = 0.05;
 
   /**
    * Constructor function
@@ -28,12 +28,12 @@ const Annotation = (function () {
   Annotation.prototype.draw = function (scene) {
     const drawing = BABYLON.MeshBuilder.CreateSphere(
       'annotation_' + this.id,
-      { diameter },
+      { DIAMETER },
       scene
     );
     const pulse = BABYLON.MeshBuilder.CreateSphere(
       'pulse_of_annotation_' + this.id,
-      { diameter },
+      { DIAMETER },
       scene
     );
     pulse.parent = drawing;
@@ -48,7 +48,7 @@ const Annotation = (function () {
         this._options.normalRef.y,
         this._options.normalRef.z
       ),
-      diameter / 2,
+      DIAMETER / 2,
       BABYLON.Space.WORLD
     );
     pulse.actionManager = new BABYLON.ActionManager(scene);
@@ -81,12 +81,22 @@ const Annotation = (function () {
   }
 
   /**
-   * Colorize annotation
+   * Set material of annotation
    * @param {BABYLON.StandardMaterial} - Material for annotation
    */
-  Annotation.prototype.colorize = function (material) {
+  Annotation.prototype.setMaterial = function (material) {
     this.drawing.material = material.clone();
     this.pulse.material = material.clone();
+  }
+
+  /**
+   * Changes material of annotation
+   * @param {string} key - Key for material object
+   * @param {any} value - Value of material change
+   */
+  Annotation.prototype.changeMaterial = function (key, value) {
+    this.drawing.material[key] = value;
+    this.pulse.material[key] = value;
   }
 
   /**

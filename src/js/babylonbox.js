@@ -167,6 +167,15 @@ H5P.BabylonBox = (function ($) {
   }
 
   /**
+   * Sets optical state of annotation
+   * @param {string} state - State of the annotation (inactive, active, hover)
+   * @param {Annotation} annotation - Annotation that should have the state
+   */
+   BabylonBox.prototype.setAnnotationState = function (state, annotation) {
+     this._annotationsManager.setAnnotationState(state, annotation);
+   }
+
+  /**
    * Starts the WebXR Experience if WebXR is supported
    */
   BabylonBox.prototype.startWebXRExperience = async function () {
