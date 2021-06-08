@@ -1,8 +1,8 @@
-import * as BABYLON from 'babylonjs';
+import { MeshBuilder, Vector3, Space, ActionManager, ExecuteCodeAction } from 'babylonjs';
 
 const Annotation = (function () {
 
-  const DIAMETER = 0.05;
+  const DIAMETER = 0.15;
 
   /**
    * Constructor function
@@ -11,10 +11,7 @@ const Annotation = (function () {
    */
   function Annotation(options) {
     H5P.EventDispatcher.call(this);
-
-    this.id = options.id;
-    this._options = options;
-    this.content = options.content;
+    Object.assign(this, options);
   }
 
   Annotation.prototype = Object.create(H5P.EventDispatcher.prototype);
@@ -26,52 +23,52 @@ const Annotation = (function () {
    * @param {BABYLON.Scene} scene - Scene of the model
    */
   Annotation.prototype.draw = function (scene) {
-    const drawing = BABYLON.MeshBuilder.CreateSphere(
+    const drawing = MeshBuilder.CreateSphere(
       'annotation_' + this.id,
-      { DIAMETER },
+      { diameter: DIAMETER },
       scene
     );
-    const pulse = BABYLON.MeshBuilder.CreateSphere(
+    const pulse = MeshBuilder.CreateSphere(
       'pulse_of_annotation_' + this.id,
-      { DIAMETER },
+      { diameter: DIAMETER },
       scene
     );
     pulse.parent = drawing;
-    drawing.position = new BABYLON.Vector3(
-      this._options.position.x,
-      this._options.position.y,
-      this._options.position.z
+    drawing.position = new Vector3(
+      this.position.x,
+      this.position.y,
+      this.position.z
     );
     drawing.translate(
-      new BABYLON.Vector3(
-        this._options.normalRef.x,
-        this._options.normalRef.y,
-        this._options.normalRef.z
+      new Vector3(
+        this.normalRef.x,
+        this.normalRef.y,
+        this.normalRef.z
       ),
       DIAMETER / 2,
-      BABYLON.Space.WORLD
+      Space.WORLD
     );
-    pulse.actionManager = new BABYLON.ActionManager(scene);
+    pulse.actionManager = new ActionManager(scene);
     // register click trigger
     pulse.actionManager.registerAction(
-      new BABYLON.ExecuteCodeAction(
-        BABYLON.ActionManager.OnPickTrigger, () => {
+      new ExecuteCodeAction(
+        ActionManager.OnPickTrigger, () => {
           this.trigger('picked', this);
         }
       )
     );
     // register pointer over trigger
     pulse.actionManager.registerAction(
-      new BABYLON.ExecuteCodeAction(
-        BABYLON.ActionManager.OnPointerOverTrigger, () => {
+      new ExecuteCodeAction(
+        ActionManager.OnPointerOverTrigger, () => {
           this.trigger('pointerover', this);
         }
       )
     );
     // register pointer out trigger
     pulse.actionManager.registerAction(
-      new BABYLON.ExecuteCodeAction(
-        BABYLON.ActionManager.OnPointerOutTrigger, () => {
+      new ExecuteCodeAction(
+        ActionManager.OnPointerOutTrigger, () => {
           this.trigger('pointerout', this);
         }
       )
@@ -106,6 +103,16 @@ const Annotation = (function () {
     this.drawing.dispose();
     this.pulse.dispose();
     delete this;
+  }
+
+  Annotation.prototype.show = function () {
+    this.drawing.isVisible = true;
+    this.pulse.isVisible = true;
+  }
+
+  Annotation.prototype.hide = function () {
+    this.drawing.isVisible = false;
+    this.pulse.isVisible = false;
   }
 
   return Annotation;

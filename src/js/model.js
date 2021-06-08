@@ -1,4 +1,4 @@
-import * as BABYLON from 'babylonjs';
+import { SceneLoader } from 'babylonjs';
 import 'babylonjs-loaders';
 
 /**
@@ -15,11 +15,12 @@ function Model(scene) {
  * @param {function} onProgressHandler - Handler for updating the import progress
  */
 Model.prototype.importAsync = async function (url, onProgressHandler) {
-  const splittedUrl = url.split('/');
+  const beforeSharp = url.split('#')[0];
+  const splittedUrl = beforeSharp.split('/');
   const fileName = splittedUrl.pop();
   const path = splittedUrl.join('/') + '/';
-  
-  const imported = await BABYLON.SceneLoader.ImportMeshAsync(
+
+  const imported = await SceneLoader.ImportMeshAsync(
     null,
     path,
     fileName,

@@ -21,6 +21,7 @@
   "dependencies": {
     "babylonjs": "^4.2.0",
     "babylonjs-loaders": "^4.2.0",
+    "pepjs": "^0.5.3",
     "webvr-polyfill": "^0.10.12",
     "webxr-polyfill": "^2.0.3"
   }

@@ -1,10 +1,12 @@
-import * as BABYLON from 'babylonjs';
+import { Engine, Scene } from 'babylonjs';
+import 'pepjs';
 import AnnotationsManager from './annotationsManager.js';
 import Camera from './camera.js';
 import Light from './light.js';
 import Model from './model.js';
 import LoadingScreen from './loadingScreen.js';
 import WebXRExperience from './webXRExperience.js';
+import GUILabel from './guiLabel.js';
 
 H5P.BabylonBox = (function ($) {
 
@@ -21,7 +23,6 @@ H5P.BabylonBox = (function ($) {
       modelUrl: 'http://models.babylonjs.com/CornellBox/cornellBox.glb',
       annotations: []
     }, options);
-    this.options.modelUrl = 'http://models.babylonjs.com/CornellBox/cornellBox.glb';
     this.webXRSupported = false;
   }
 
@@ -36,16 +37,19 @@ H5P.BabylonBox = (function ($) {
   BabylonBox.prototype.attach = async function ($wrapper) {
     this._$container = $(`<div class="h5p-babylonbox"></div>`).appendTo($wrapper);
 
-    this.$canvas = $('<canvas class="h5p-babylonbox--canvas" />');
+    this.$canvas = $(`<canvas
+      class="h5p-babylonbox--canvas"
+      touch-action="none"
+    />`);
     this.$canvas.appendTo(this._$container);
 
     await this._createBabylonScene();
 
     // Check WebXR support
-    this._webXR = new WebXRExperience(this.$canvas[0], this.scene);
-    const webXRSupported = await this._webXR.isSupported();
+    this.webXR = new WebXRExperience(this.$canvas[0], this.scene);
+    const webXRSupported = await this.webXR.isSupported();
     if (webXRSupported) {
-      console.log('h5p-babylonbox --- WebXR supported');
+      console.log('WebXR is supported in your browser');
       this.trigger('WebXR supported');
     }
 
@@ -94,8 +98,8 @@ H5P.BabylonBox = (function ($) {
    * @private
    */
   BabylonBox.prototype._createBabylonScene = async function () {
-    this.engine = new BABYLON.Engine(this.$canvas[0], true);
-    this.scene = new BABYLON.Scene(this.engine);
+    this.engine = new Engine(this.$canvas[0], true);
+    this.scene = new Scene(this.engine);
 
     // Create and show loading screen
     this.engine.loadingScreen = new LoadingScreen(this._$container);
@@ -175,23 +179,49 @@ H5P.BabylonBox = (function ($) {
      this._annotationsManager.setAnnotationState(state, annotation);
    }
 
+   /**
+    * Makes all annotations visible
+    */
+   BabylonBox.prototype.showAllAnnotations = function () {
+     for (const annotation of this.getAnnotations()) {
+       this.setAnnotationState('inactive', annotation);
+       annotation.show();
+     }
+   }
+
+   /**
+    * Hides all annotations
+    */
+   BabylonBox.prototype.hideAllAnnotations = function () {
+     for (const annotation of this.getAnnotations()) {
+       annotation.hide();
+     }
+   }
+
   /**
    * Starts the WebXR Experience if WebXR is supported
    */
   BabylonBox.prototype.startWebXRExperience = async function () {
-    const webXRSupported = await this._webXR.isSupported();
+    const webXRSupported = await this.webXR.isSupported();
     if (!webXRSupported) {
       alert('WebXR is not supported');
       return;
     }
-    this._webXR.start();
+    if (!this.guiLabel) {
+      this.guiLabel = GUILabel(this.scene);
+    }
+    this.webXR.start();
   }
 
   /**
    * Exits WebXR Experience
    */
   BabylonBox.prototype.exitWebXRExperience = async function () {
-    this._webXR.exit();
+    if (this.guiLabel) {
+      this.guiLabel.hide();
+    }
+    this.showAllAnnotations();
+    this.webXR.exit();
   }
 
   return BabylonBox;

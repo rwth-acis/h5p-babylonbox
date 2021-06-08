@@ -1,4 +1,4 @@
-import * as BABYLON from 'babylonjs';
+import { StandardMaterial, Color3, Vector3, Animation, AnimationGroup } from 'babylonjs';
 import Annotation from './annotation.js';
 
 const AnnotationsManager = (function () {
@@ -24,12 +24,12 @@ const AnnotationsManager = (function () {
     this.annotations = [];
     this.activeAnnotation = null;
 
-    this._annotationMaterial = new BABYLON.StandardMaterial(
+    this._annotationMaterial = new StandardMaterial(
       'material for markers',
       this._babylonBox.scene
     );
     this._annotationMaterial.disableLighting = true;
-    this._annotationMaterial.emissiveColor = new BABYLON.Color3(
+    this._annotationMaterial.emissiveColor = new Color3(
       ...COLORS.inactive
     );
     this._annotationMaterial.alpha = MATERIAL_OPACITY;
@@ -49,11 +49,11 @@ const AnnotationsManager = (function () {
         keys: [
           {
             frame: 0,
-            value: new BABYLON.Vector3(1, 1, 1)
+            value: new Vector3(1, 1, 1)
           },
           {
             frame: 10,
-            value: new BABYLON.Vector3(3, 3, 3)
+            value: new Vector3(3, 3, 3)
           }
         ]
       },
@@ -74,16 +74,16 @@ const AnnotationsManager = (function () {
     }
     for (const state in annotationAnimations) {
       const configObj = annotationAnimations[state];
-      configObj.obj = new BABYLON.Animation(
+      configObj.obj = new Animation(
         state + ' annotation',
         configObj.transform,
         10,
-        BABYLON.Animation['ANIMATIONTYPE_' + configObj.valueType],
-        BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+        Animation['ANIMATIONTYPE_' + configObj.valueType],
+        Animation.ANIMATIONLOOPMODE_CYCLE
       );
       configObj.obj.setKeys(configObj.keys);
     }
-    annotationAnimationGroup = new BABYLON.AnimationGroup(
+    annotationAnimationGroup = new AnimationGroup(
       "animation group for annotations",
       this._babylonBox.scene
     );
@@ -175,7 +175,7 @@ const AnnotationsManager = (function () {
    */
   AnnotationsManager.prototype._changeOpticalState = function (state, hasPulse, annotation) {
       annotation.pulse.isVisible = hasPulse;
-      annotation.changeMaterial('emissiveColor', new BABYLON.Color3(...COLORS[state]));
+      annotation.changeMaterial('emissiveColor', new Color3(...COLORS[state]));
   }
 
   return AnnotationsManager;

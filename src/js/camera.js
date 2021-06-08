@@ -1,4 +1,4 @@
-import * as BABYLON from 'babylonjs';
+import { ArcRotateCamera, Vector3, AutoRotationBehavior, FramingBehavior } from 'babylonjs';
 
 /**
  * Constructor function
@@ -7,16 +7,40 @@ import * as BABYLON from 'babylonjs';
  * @param {BABYLON.Scene} scene
  */
 function Camera(name, canvas, scene) {
-  this.babylon = new BABYLON.ArcRotateCamera(
+
+  this.autoRotationEnabled = false;
+
+  // Get world dimensions
+  // from https://github.com/Kompakkt/Viewer/blob/master/src/app/services/babylon/camera-handler.ts
+
+  const worldExtends = scene.getWorldExtends();
+  const worldSize = worldExtends.max.subtract(worldExtends.min);
+  const worldCenter = worldExtends.min.add(worldSize.scale(0.5));
+
+  let radius = worldSize.length() * 1.5;
+  // empty scene scenario
+  if (!isFinite(radius)) {
+    radius = 1;
+    worldCenter.copyFromFloats(0, 0, 0);
+  }
+
+  this.babylonObj = new ArcRotateCamera(
     name,
-    -Math.PI / 2,
+    -(Math.PI / 2),
     Math.PI / 2.5,
-    20,
-    new BABYLON.Vector3(0, 0, 0),
+    radius,
+    worldCenter,
     scene
   );
-  this.babylon.attachControl(canvas, true);
-  this.babylon.setTarget(new BABYLON.Vector3(0, 0, 0));
+  this.babylonObj.lowerRadiusLimit = radius * 0.01;
+
+  this.babylonObj.minZ = radius * 0.01;
+  this.babylonObj.maxZ = radius * 1000;
+  this.babylonObj.speed = radius * 0.2;
+
+  this.babylonObj.attachControl(canvas, true);
+  this.babylonObj.setTarget(new Vector3(0, 0, 0));
+  this.babylonObj.allowUpsideDown = false;
 }
 
 /**
@@ -24,11 +48,26 @@ function Camera(name, canvas, scene) {
  * @param {number} speed - Speed of rotation
  */
 Camera.prototype.startAutoRotation = function (speed) {
-  if (!this._autoRotation) {
-    this._autoRotation = new BABYLON.AutoRotationBehavior();
+  if (this.autoRotationEnabled) {
+    return;
   }
-  this._autoRotation.idleRotationSpeed = speed || 0.3;
-  this._autoRotation.attach(this.babylon);
+  this.pauseAutoRotation();
+  this._autoRotation = new AutoRotationBehavior();
+  this._autoRotation.idleRotationSpeed = speed || 0.15;
+  this._autoRotation.attach(this.babylonObj);
+  this._autoRotation.init();
+  this.autoRotationEnabled = true;
+}
+
+/**
+ * Pauses auto rotation of camera
+ */
+Camera.prototype.pauseAutoRotation = function () {
+  if (this._autoRotation) {
+    this._autoRotation.detach();
+    delete this._autoRotation;
+    this.autoRotationEnabled = false;
+  }
 }
 
 /**
@@ -36,10 +75,10 @@ Camera.prototype.startAutoRotation = function (speed) {
  */
 Camera.prototype.setFramingBehavior = function () {
   if (!this._framing) {
-    this._framing = new BABYLON.FramingBehavior();
+    this._framing = new FramingBehavior();
     this._framing.radiusScale = 20;
   }
-  this._framing.attach(this.babylon);
+  this._framing.attach(this.babylonObj);
 }
 
 export default Camera;

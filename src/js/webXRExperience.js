@@ -1,4 +1,4 @@
-import * as BABYLON from 'babylonjs';
+import { WebXRSessionManager, WebXRExperienceHelper, WebXRState } from 'babylonjs';
 import WebXRPolyfill from 'webxr-polyfill';
 
 /**
@@ -21,7 +21,7 @@ function WebXRExperience(canvas, scene) {
  * @return {boolean} - True if WebXR is supported
  */
 WebXRExperience.prototype.isSupported = async function () {
-  return await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-vr');
+  return await WebXRSessionManager.IsSessionSupportedAsync('immersive-vr');
 }
 
 /**
@@ -33,7 +33,7 @@ WebXRExperience.prototype.start = async function () {
   }
 
   if (!this._xrHelper) {
-    this._xrHelper = await BABYLON.WebXRExperienceHelper.CreateAsync(this._scene);
+    this._xrHelper = await WebXRExperienceHelper.CreateAsync(this._scene);
     this._observeStates();
   }
 
@@ -45,6 +45,10 @@ WebXRExperience.prototype.start = async function () {
 
   document.body.addEventListener('keydown', this._keydownHandler);
   await this._xrHelper.enterXRAsync('immersive-vr', 'local-floor');
+
+  if (d4t) {
+    d4t.incr('inWebXR')
+  }
 }
 
 /**
@@ -64,17 +68,17 @@ WebXRExperience.prototype.exit = async function () {
 WebXRExperience.prototype._observeStates = function () {
   this._xrHelper.onStateChangedObservable.add((state) => {
       switch (state) {
-        case BABYLON.WebXRState.IN_XR:
+        case WebXRState.IN_XR:
           // XR is initialized and already submitted one frame
           this.inWebXR = true;
           break;
-        case BABYLON.WebXRState.ENTERING_XR:
+        case WebXRState.ENTERING_XR:
           // xr is being initialized, enter XR request was made
           break;
-        case BABYLON.WebXRState.EXITING_XR:
+        case WebXRState.EXITING_XR:
           // xr exit request was made. not yet done.
           break;
-        case BABYLON.WebXRState.NOT_IN_XR:
+        case WebXRState.NOT_IN_XR:
           // either our or not yet in XR
           this.exitFullscreen();
           document.removeEventListener('keydown', this._keydownHandler);
@@ -120,28 +124,5 @@ WebXRExperience.prototype.exitFullscreen = function () {
   document.exitFullscreen();
   this.inFullscreen = false;
 }
-
-/*
-Annotation GUI in WebXR (is shown when annotation was clicked)
-var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("ui");
-var box = new BABYLON.GUI.Rectangle();
-box.height = "50px";
-box.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-box.cornerRadius = 10;
-box.color = "white";
-box.background = "rgba(0, 0, 0, 0.4)";
-box.paddingLeft = "10px";
-box.paddingRight = "10px";
-box.paddingBottom = "10px";
-box.thickness = 0;
-advancedTexture.addControl(box);
-
-var label = new BABYLON.GUI.TextBlock();
-label.text = "Nervenbahnen";
-label.fontSize = 20;
-box.addControl(label);
-
-box.isVisible = false;
-*/
 
 export default WebXRExperience;
